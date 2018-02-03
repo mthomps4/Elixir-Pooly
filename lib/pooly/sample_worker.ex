@@ -29,3 +29,9 @@ end
 
 # Supervisor.count_children(worker_sup)
 # > %{active: 5, specs: 1, supervisors: 0, workers: 5}
+
+# {:ok, worker_pid} = Supervisor.start_child(worker_sup, [[]])
+# SampleWorker.stop(worker_pid)
+ # > :OK
+
+# Supervisor.which_children(worker_sup)
