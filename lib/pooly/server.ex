@@ -10,8 +10,8 @@ defmodule Pooly.Server do
   #API#
   #####
 
-  def start_link(pool_config) do
-    GenServer.start_link(__MODULE__, pool_config, name: __MODULE__)
+  def start_link(pools_config) do
+    GenServer.start_link(__MODULE__, pools_config, name: __MODULE__)
   end
 
   def checkout(pool_name) do
@@ -19,7 +19,7 @@ defmodule Pooly.Server do
   end
 
   def checkin(pool_name, worker_pid) do
-    GenServer.call(:"#{pool_name}Server", {:checkin, worker_pid})
+    GenServer.cast(:"#{pool_name}Server", {:checkin, worker_pid})
   end
 
   def status(pool_name) do
@@ -31,11 +31,12 @@ defmodule Pooly.Server do
   ###########
 
   # Iterates through the configuration and sends the :start_pool message to itself 
+
   def init(pools_config) do
-    pools_config
-    |> Enum.each(fn(pool_config) -> 
-      send(self(), {:start_pool, pool_config})
+    pools_config |> Enum.each(fn(pool_config) ->
+      send(self, {:start_pool, pool_config})
     end)
+
     {:ok, pools_config}
   end
 
@@ -44,7 +45,6 @@ defmodule Pooly.Server do
     {:ok, _pool_sup} = Supervisor.start_child(Pooly.PoolsSupervisor, supervisor_spec(pool_config))
     {:noreply, state}
   end
-
 
   #########
   #Private#
