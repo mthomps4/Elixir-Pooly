@@ -33,6 +33,7 @@ defmodule Pooly.Server do
 
   # Invoked when GenServer.start_link/3 is called 
   def init([sup, pool_config]) when is_pid(sup) do
+    Process.flag(:trap_exit, true) # Trap exit if worker crashes 
     monitors = :ets.new(:monitors, [:private])
     init(pool_config, %State{sup: sup, monitors: monitors})
   end
@@ -59,6 +60,31 @@ defmodule Pooly.Server do
     {:ok, worker_sup} = Supervisor.start_child(sup, supervisor_spec(mfa)) #supervisor_spec(mfa) starts the worker Sup via top-level SUP
     workers = prepopulate(size, worker_sup) # create "size" number of workers that are supervised with the newly created worker SUP
     {:noreply, %{state | worker_sup: worker_sup, workers: workers}} # updates the state with the worker Sup Pid and it's workers
+  end
+
+  # handle when consumer process :DOWN 
+  # When a consumer process goes down, you match the reference in the monitors ETS table, delete the monitor, and add the worker back into state
+  def handle_info({:DOWN, ref, _, _, _}, state = %{monitors: monitors, workers: workers}) do
+    case :ets.match(monitors, {:"$1", ref}) do
+      [[pid]] -> 
+        true = :ets.delete(monitors, pid)
+        new_state = %{state | workers: [pid|workers]} #returns the worker to the pool
+        {:noreply, new_state}
+      [[]] -> 
+        {:noreply, state}
+    end
+  end
+
+  # When a worker dies -- take it out return to state -- create new worker
+  def handle_info({:EXIT, pid, _reason}, state = %{monitors: monitors, workers: workers, worker_sup: worker_sup}) do
+    case :ets.lookup(monitors, pid) do
+      [{pid, ref}] -> 
+        true = Process.demonitor(ref)
+        true = :ets.delete(monitors, pid) 
+        new_state = %{state | workers: [new_worker(worker_sup)|workers]}
+      [[]] -> 
+        {:noreply, state}
+    end
   end
 
   # from = {client_pid, tag_reference}
