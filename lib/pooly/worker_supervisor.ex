@@ -5,18 +5,27 @@ defmodule Pooly.WorkerSupervisor do
   #API#
   #####
 
-  def start_link({_,_,_} = mfa) do
-    Supervisor.start_link(__MODULE__, mfa)
+  def start_link(pool_server, {_m,_f,_a} = mfa) do
+    Supervisor.start_link(__MODULE__, [pool_server, mfa])
   end
   ###########
   #CALLBACKS#
   ###########
 
-  # Matches tuple from start_link {module, function, args}
-  def init({m, f, a} = _x) do
-    worker_opts = [restart: :permanent, function: f] # always restarted -- specifies function for worker
-    children = [worker(m, a, worker_opts)] # create a list of child processes
-    opts = [strategy: :simple_one_for_one, max_restarts: 5, max_seconds: 5] # options for supervisor
+  # Matches from start_link [server, {module, function, args}]
+  def init([pool_server, {m, f, a}]) do
+    worker_opts = [
+      restart: :temporary, 
+      shutdown: 5000,
+      function: f,
+    ]
+
+    children = [worker(m, a, worker_opts)]
+    opts = [
+      strategy: :simple_one_for_one,
+      max_restart: 5,
+      max_seconds: 5,
+    ]
 
     supervise(children, opts) # helper function to create the child specification
   end

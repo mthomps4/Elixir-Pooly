@@ -7,7 +7,7 @@ defmodule Pooly.PoolsSupervisor do
 
   def init(_) do
     opts = [
-      strategy: :one_for_one #one for one to pass in SUP
+      strategy: :one_for_one #one for one to pass in SUP -- one pool crash shouldn't affect another
     ]
     supervise([], opts)
   end
