@@ -3,7 +3,16 @@ defmodule Pooly.PoolServer do
   import Supervisor.Spec
 
   defmodule State do
-    defstruct pool_sup: nil, worker_sup: nil, monitors: nil, size: nil, workers: nil, name: nil, mfa: nil
+    defstruct 
+      pool_sup: nil,
+      worker_sup: nil,
+      monitors: nil,
+      size: nil,
+      workers: nil,
+      name: nil,
+      mfa: nil,
+      overflow: nil,
+      max_overflow: nil,
   end
 
   def start_link(pool_sup, pool_config) do
@@ -40,6 +49,10 @@ defmodule Pooly.PoolServer do
     init(rest,  %{state | name: name})
   end
 
+  def init([{:max_overflow, max_overflow}|rest], state) do
+    init(rest, %{state | max_overflow: max_overflow})
+  end
+
   def init([{:mfa, mfa}|rest], state) do
     init(rest,  %{state | mfa: mfa})
   end
@@ -68,6 +81,8 @@ defmodule Pooly.PoolServer do
         {:reply, :noproc, state}
     end
   end
+
+  
 
   def handle_call(:status, _from, %{workers: workers, monitors: monitors} = state) do
     {:reply, {length(workers), :ets.info(monitors, :size)}, state}
