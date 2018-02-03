@@ -4,7 +4,7 @@ defmodule Pooly.Server do
 
   # Struct that maintaines state of Server
   defmodule State do
-    defstruct sup: nil, size: nil, mfa: nil, monitors: nil
+    defstruct sup: nil, worker_sup: nil, monitors: nil, size: nil, workers: nil, mfa: nil
   end
 
   #####
@@ -55,7 +55,6 @@ defmodule Pooly.Server do
   end
 
   ## Handles 
-
   def handle_info(:start_worker_supervisor, state = %{sup: sup, mfa: mfa, size: size}) do
     {:ok, worker_sup} = Supervisor.start_child(sup, supervisor_spec(mfa)) #supervisor_spec(mfa) starts the worker Sup via top-level SUP
     workers = prepopulate(size, worker_sup) # create "size" number of workers that are supervised with the newly created worker SUP
