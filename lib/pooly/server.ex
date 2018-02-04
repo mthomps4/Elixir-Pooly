@@ -1,36 +1,39 @@
 defmodule Pooly.Server do
-  @moduledoc """
-  delegate all the requests to the respective pools and to start the pools and attach the pools to PoolySupervisor
-  assumed each thing is named an ATOM :"{pool_name}Server"
-  """
   use GenServer
   import Supervisor.Spec
 
-  #####
-  #API#
-  #####
+  #######
+  # API #
+  #######
 
   def start_link(pools_config) do
     GenServer.start_link(__MODULE__, pools_config, name: __MODULE__)
   end
 
-  def checkout(pool_name) do
-    GenServer.call(:"#{pool_name}Server", :checkout)
+  def checkout(pool_name, block, timeout) do
+    Pooly.PoolServer.checkout(pool_name, block, timeout)
   end
 
   def checkin(pool_name, worker_pid) do
-    GenServer.cast(:"#{pool_name}Server", {:checkin, worker_pid})
+    Pooly.PoolServer.checkin(pool_name, worker_pid)
+  end
+
+  def transaction(pool_name, fun, timeout) do
+    worker = checkout(pool_name, true, timeout)
+    try do
+      fun.(worker)
+    after
+      checkin(pool_name, worker)
+    end
   end
 
   def status(pool_name) do
-    GenServer.call(:"#{pool_name}Server", :status)
+    Pooly.PoolServer.status(pool_name)
   end
 
-  ###########
-  #CALLBACKS#
-  ###########
-
-  # Iterates through the configuration and sends the :start_pool message to itself 
+  #############
+  # Callbacks #
+  #############
 
   def init(pools_config) do
     pools_config |> Enum.each(fn(pool_config) ->
@@ -40,19 +43,21 @@ defmodule Pooly.Server do
     {:ok, pools_config}
   end
 
-  # on receiving msg passes pool_config to PoolsSup
   def handle_info({:start_pool, pool_config}, state) do
     {:ok, _pool_sup} = Supervisor.start_child(Pooly.PoolsSupervisor, supervisor_spec(pool_config))
+
     {:noreply, state}
   end
 
-  #########
-  #Private#
-  #########
+  #####################
+  # Private Functions #
+  #####################
 
-  defp supervisor_spec(pool_conf) do
-    opts = [id: :"#{pool_conf[:name]}Supervisor"] # Helper to generate unique Sup Spec w/ id option
-    supervisor(Pooly.PoolSupervisor, [pool_conf], opts)
+  defp supervisor_spec(pool_config) do
+    # TODO: WHAT SHOULD BE GOOD VALUES
+    # NOTE: This needs to be random because by de
+    opts = [id: :"#{pool_config[:name]}Supervisor"]
+    supervisor(Pooly.PoolSupervisor, [pool_config], opts)
   end
 end # End Module
 

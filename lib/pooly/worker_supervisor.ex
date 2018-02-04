@@ -1,31 +1,23 @@
 defmodule Pooly.WorkerSupervisor do
   use Supervisor
 
-  #####
-  #API#
-  #####
-
   def start_link(pool_server, {_,_,_} = mfa) do
     Supervisor.start_link(__MODULE__, [pool_server, mfa])
   end
-  ###########
-  #CALLBACKS#
-  ###########
 
-  # Matches from start_link [server, {module, function, args}]
   def init([pool_server, {m,f,a}]) do
     Process.link(pool_server)
-    worker_opts = [
-      shutdown: 5000,
-      function: f
-    ]
+    # NOTE: Restart temporary means that we don't let the
+    #       supervisor restart the worker. Instead, the
+    #       PoolServer handle it instead.
+    worker_opts = [restart: :temporary,
+                   shutdown: 5000,
+                   function: f]
 
     children = [worker(m, a, worker_opts)]
-    opts     = [
-      strategy:    :simple_one_for_one,
-      max_restarts: 5,
-      max_seconds:  5
-    ]
+    opts     = [strategy:    :simple_one_for_one,
+                max_restart: 5,
+                max_time:    3600]
 
     supervise(children, opts)
   end

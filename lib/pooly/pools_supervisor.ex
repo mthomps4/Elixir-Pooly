@@ -1,13 +1,13 @@
 defmodule Pooly.PoolsSupervisor do
-  use Supervisor 
+  use Supervisor
 
   def start_link do
-    Supervisor.start_link(__MODULE__, [], name: __MODULE__) #starts and gives name of Module
+    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def init(_) do
     opts = [
-      strategy: :one_for_one #one for one to pass in SUP -- one pool crash shouldn't affect another
+      strategy: :one_for_one
     ]
     supervise([], opts)
   end
