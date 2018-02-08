@@ -57,8 +57,9 @@ starts workers with config from start
   end
 ```
 
-`PoolsSupervisor` starts a one-for-one supervisor for the pools `PoolSupervisor1`
+`PoolsSupervisor` starts a one-for-one supervisor for the pools example: `PoolSupervisor1`
 
 `Pooly.Server` -- GenServer for ??? 
 
+`PoolSupervisor` - one for all to start starts `Pooly.PoolServer` as a GenServer worker.
 
